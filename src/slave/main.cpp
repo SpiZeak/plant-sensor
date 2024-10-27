@@ -1,26 +1,10 @@
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
 #include <espnow.h>
 #include <FirebaseClient.h>
 #include <config.h>
+#include <WiFiManager.h>
 
-void connectToWiFi()
-{
-  // Connect to Wi-Fi
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to Wi-Fi");
-
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(150);
-    Serial.print(".");
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(150);
-  }
-
-  Serial.println("Connected!");
-}
+WiFiManager wm;
 
 String macToBase36(uint8_t *macAddress)
 {
@@ -98,11 +82,19 @@ void setup()
   // Wait for serial communication to be established
   delay(1000);
 
-  // Initialize WiFi in station mode
-  WiFi.mode(WIFI_STA);
+  // Get the MAC address
+  String macStr = WiFi.macAddress();
+  uint8_t mac[6];
+  sscanf(macStr.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+  String shortMac = macToBase36(mac);
 
-  // Connect to the Wi-Fi network
-  connectToWiFi();
+  // Connect to Wi-Fi
+  String ssid = "PLANT SENSOR " + shortMac;
+  std::vector<const char *> wm_menu = {"wifi", "exit"};
+  wm.setShowInfoUpdate(false);
+  wm.setShowInfoErase(false);
+  wm.setMenu(wm_menu);
+  wm.autoConnect(ssid.c_str());
 
   // Initialize ESP-NOW
   if (esp_now_init() != 0)
@@ -120,4 +112,5 @@ void setup()
 
 void loop()
 {
+  // Do nothing
 }
