@@ -1,6 +1,26 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <espnow.h>
+#include <FirebaseClient.h>
+#include <config.h>
+
+void connectToWiFi()
+{
+  // Connect to Wi-Fi
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to Wi-Fi");
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(150);
+    Serial.print(".");
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(150);
+  }
+
+  Serial.println("Connected!");
+}
 
 String macToBase36(uint8_t *macAddress)
 {
@@ -62,22 +82,27 @@ void onDataRecv(uint8_t *mac, uint8_t *incomingData, uint8_t len)
 
   for (int i = 0; i <= 1; i++)
   {
-    digitalWrite(LED_BUILTIN, HIGH); // Turn the LED on
-    delay(80);                       // Wait for 80 milliseconds
-    digitalWrite(LED_BUILTIN, LOW);  // Turn the LED off
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(80);
+    digitalWrite(LED_BUILTIN, LOW);
   }
 }
 
 void setup()
 {
+  pinMode(LED_BUILTIN, OUTPUT);
+
   // Initialize serial communication at 115200 baud
   Serial.begin(115200);
 
   // Wait for serial communication to be established
-  delay(1000); // Give some time for the serial monitor to connect
+  delay(1000);
 
   // Initialize WiFi in station mode
   WiFi.mode(WIFI_STA);
+
+  // Connect to the Wi-Fi network
+  connectToWiFi();
 
   // Initialize ESP-NOW
   if (esp_now_init() != 0)
@@ -91,8 +116,6 @@ void setup()
   // Register the receive callback
   esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
   esp_now_register_recv_cb(onDataRecv);
-
-  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void loop()
