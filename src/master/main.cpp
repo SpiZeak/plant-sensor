@@ -1,35 +1,29 @@
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <espnow.h>
+#include <WiFi.h>
+#include <esp_now.h>
 
 // Target MAC address
-uint8_t targetMacAddress[] = {0xC4, 0x5B, 0xBE, 0x6C, 0xDB, 0x7C};
+uint8_t targetMacAddress[] = {0x80, 0x65, 0x99, 0xe3, 0xb7, 0xc6};
+
+// Create peer interface
+esp_now_peer_info_t peerInfo;
 
 // Callback when data is sent
-void onDataSent(uint8_t *mac_addr, uint8_t sendStatus)
+void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
   Serial.print("Send Status: ");
-  Serial.println(sendStatus == 0 ? "Delivery Success" : "Delivery Fail");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 
-  // Enter deep sleep mode for 30 minutes
   ESP.deepSleep(4e6); // 1e7 is equivalent to 10,000,000 microseconds = 10 seconds
   // ESP.deepSleep(1.8e9); // 1.8e9 is equivalent to 1,800,000,000 microseconds = 30 minutes
 }
 
 void setup()
 {
-  // Disable pin D4
-  pinMode(D4, OUTPUT);
-  digitalWrite(D4, LOW);
-
   // Initialize serial communication at 115200 baud
   Serial.begin(115200);
-  Serial.setTimeout(2000);
 
-  // Wait for serial to initialize.
-  while (!Serial)
-  {
-  }
+  delay(1000);
 
   // Initialize WiFi in station mode
   WiFi.mode(WIFI_STA);
@@ -41,22 +35,29 @@ void setup()
     return;
   }
 
-  // Read A0 pin
-  int sensorValue = analogRead(A0);
+  // Read sensor pin
+  int sensorValue = analogRead(1);
   Serial.print("\rSensor Value: ");
   Serial.println(sensorValue);
 
   // Register the send callback
-  esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_register_send_cb(onDataSent);
 
   // Add the peer
-  esp_now_add_peer(targetMacAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+  memcpy(peerInfo.peer_addr, targetMacAddress, 6);
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
+  if (esp_now_add_peer(&peerInfo) != ESP_OK)
+  {
+    Serial.println("Failed to add peer");
+    return;
+  }
 
   Serial.println("Sending data...");
 
   // Send data
-  esp_now_send(targetMacAddress, (uint8_t *)&sensorValue, sizeof(sensorValue));
+  esp_err_t result = esp_now_send(targetMacAddress, (uint8_t *)&sensorValue, sizeof(sensorValue));
 }
 
 void loop()

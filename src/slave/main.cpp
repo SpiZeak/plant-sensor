@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <espnow.h>
+#include <esp_now.h>
 #include <FirebaseClient.h>
 #include <config.h>
 #include <WiFiManager.h>
@@ -82,14 +82,8 @@ void setup()
   // Wait for serial communication to be established
   delay(1000);
 
-  // Get the MAC address
-  String macStr = WiFi.macAddress();
-  uint8_t mac[6];
-  sscanf(macStr.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
-  String shortMac = macToBase36(mac);
-
   // Connect to Wi-Fi
-  String ssid = "PLANT SENSOR " + shortMac;
+  String ssid = "PlantSensor";
   std::vector<const char *> wm_menu = {"wifi", "exit"};
   wm.setShowInfoUpdate(false);
   wm.setShowInfoErase(false);
@@ -106,8 +100,7 @@ void setup()
   Serial.println("\rESP-NOW Initialized");
 
   // Register the receive callback
-  esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
-  esp_now_register_recv_cb(onDataRecv);
+  esp_now_register_recv_cb(esp_now_recv_cb_t(onDataRecv));
 }
 
 void loop()
